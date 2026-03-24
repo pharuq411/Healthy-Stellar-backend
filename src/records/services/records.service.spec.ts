@@ -8,6 +8,8 @@ import { IpfsService } from './ipfs.service';
 import { StellarService } from './stellar.service';
 import { RecordType } from '../dto/create-record.dto';
 import { SortBy, SortOrder } from '../dto/pagination-query.dto';
+import { AccessControlService } from '../../access-control/services/access-control.service';
+import { AuditLogService } from '../../common/services/audit-log.service';
 
 jest.mock('qrcode', () => ({
   toDataURL: jest.fn().mockResolvedValue('data:image/png;base64,mockedQR'),
@@ -24,6 +26,7 @@ describe('RecordsService', () => {
     save: jest.fn(),
     findOne: jest.fn(),
     findAndCount: jest.fn(),
+    find: jest.fn(),
   };
 
   const mockIpfsService = {
@@ -33,6 +36,14 @@ describe('RecordsService', () => {
   const mockStellarService = {
     anchorCid: jest.fn(),
     createShareLink: jest.fn(),
+  };
+
+  const mockAccessControlService = {
+    findActiveEmergencyGrant: jest.fn(),
+  };
+
+  const mockAuditLogService = {
+    create: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -53,6 +64,14 @@ describe('RecordsService', () => {
         },
         { provide: 'AccessControlService', useValue: { findActiveEmergencyGrant: jest.fn() } },
         { provide: 'AuditLogService', useValue: { create: jest.fn() } },
+        {
+          provide: AccessControlService,
+          useValue: mockAccessControlService,
+        },
+        {
+          provide: AuditLogService,
+          useValue: mockAuditLogService,
+        },
       ],
     }).compile();
 
@@ -60,6 +79,55 @@ describe('RecordsService', () => {
     repository = module.get<Repository<Record>>(getRepositoryToken(Record));
 
     jest.clearAllMocks();
+  });
+
+  describe('findRecent', () => {
+    it('should return the last 50 records with truncated patient address', async () => {
+      const mockRecords: Partial<Record>[] = [
+        {
+          id: 'record-1',
+          patientId: 'patient-address-long-id',
+          recordType: RecordType.MEDICAL_REPORT,
+          createdAt: new Date(),
+        },
+      ];
+
+      mockRepository.find.mockResolvedValue(mockRecords);
+
+      const result = await service.findRecent();
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        recordId: 'record-1',
+        patientAddress: 'patien...g-id',
+        providerAddress: 'System',
+        recordType: RecordType.MEDICAL_REPORT,
+        createdAt: expect.any(Date),
+      });
+
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        order: { createdAt: 'DESC' },
+        take: 50,
+        cache: 30000,
+      });
+    });
+
+    it('should not truncate short patient addresses', async () => {
+      const mockRecords: Partial<Record>[] = [
+        {
+          id: 'record-1',
+          patientId: 'short',
+          recordType: RecordType.MEDICAL_REPORT,
+          createdAt: new Date(),
+        },
+      ];
+
+      mockRepository.find.mockResolvedValue(mockRecords);
+
+      const result = await service.findRecent();
+
+      expect(result[0].patientAddress).toBe('short');
+    });
   });
 
   describe('findAll', () => {
