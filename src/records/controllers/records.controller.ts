@@ -17,6 +17,10 @@ import { RecordsService } from '../services/records.service';
 import { CreateRecordDto } from '../dto/create-record.dto';
 import { PaginationQueryDto } from '../dto/pagination-query.dto';
 import { PaginatedRecordsResponseDto } from '../dto/paginated-response.dto';
+import { RecentRecordDto } from '../dto/recent-record.dto';
+import { MedicalRoles } from '../../roles/medical-rbac.decorator';
+import { MedicalRole } from '../../roles/medical-roles.enum';
+import { MedicalRbacGuard } from '../../roles/medical-rbac.guard';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../../auth/guards/admin.guard';
 
@@ -96,6 +100,21 @@ export class RecordsController {
   })
   async findAll(@Query() query: PaginationQueryDto): Promise<PaginatedRecordsResponseDto> {
     return this.recordsService.findAll(query);
+  }
+
+  @Get('recent')
+  @ApiBearerAuth()
+  @UseGuards(MedicalRbacGuard)
+  @MedicalRoles(MedicalRole.ADMIN)
+  @ApiOperation({ summary: 'Get latest platform activity (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Recent records retrieved successfully',
+    type: [RecentRecordDto],
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
+  async getRecent(): Promise<RecentRecordDto[]> {
+    return this.recordsService.findRecent();
   }
 
   @Get(':id')

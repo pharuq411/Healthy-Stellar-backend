@@ -5,6 +5,7 @@ import { Record } from '../entities/record.entity';
 import { CreateRecordDto } from '../dto/create-record.dto';
 import { PaginationQueryDto } from '../dto/pagination-query.dto';
 import { PaginatedRecordsResponseDto, PaginationMeta } from '../dto/paginated-response.dto';
+import { RecentRecordDto } from '../dto/recent-record.dto';
 import { IpfsService } from './ipfs.service';
 import { StellarService } from './stellar.service';
 import { AccessControlService } from '../../access-control/services/access-control.service';
@@ -91,6 +92,9 @@ export class RecordsService {
     const skip = (page - 1) * limit;
     const [data, total] = await this.recordRepository.findAndCount({
       where,
+      order: {
+        [sortBy]: order.toUpperCase() as any,
+      },
       order: { [sortBy]: order.toUpperCase() },
       take: limit,
       skip,
@@ -138,6 +142,27 @@ export class RecordsService {
     return record;
   }
 
+  async findRecent(): Promise<RecentRecordDto[]> {
+    const records = await this.recordRepository.find({
+      order: {
+        createdAt: 'DESC',
+      },
+      take: 50,
+      cache: 30000, // 30 seconds cache
+    });
+
+    return records.map((record) => ({
+      recordId: record.id,
+      patientAddress: this.truncateAddress(record.patientId),
+      providerAddress: 'System', // As records entity doesn't have providerId yet, defaulting to 'System'
+      recordType: record.recordType,
+      createdAt: record.createdAt,
+    }));
+  }
+
+  private truncateAddress(address: string): string {
+    if (address.length <= 10) return address;
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   /**
    * Derive the current state of a record by replaying its event stream.
    * Falls back to the latest snapshot + delta events for performance.

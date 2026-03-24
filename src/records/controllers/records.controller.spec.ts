@@ -4,6 +4,9 @@ import { RecordsController } from './records.controller';
 import { RecordsService } from '../services/records.service';
 import { RecordType } from '../dto/create-record.dto';
 import { SortBy, SortOrder } from '../dto/pagination-query.dto';
+import { MedicalPermissionsService } from '../../roles/services/medical-permissions.service';
+import { MedicalAuditService } from '../../roles/services/medical-audit.service';
+import { EmergencyOverrideService } from '../../roles/services/emergency-override.service';
 
 describe('RecordsController', () => {
   let controller: RecordsController;
@@ -13,6 +16,20 @@ describe('RecordsController', () => {
     uploadRecord: jest.fn(),
     findAll: jest.fn(),
     findOne: jest.fn(),
+    findRecent: jest.fn(),
+  };
+
+  const mockPermissionsService = {
+    hasAllPermissions: jest.fn(),
+    canAccessDepartment: jest.fn(),
+  };
+
+  const mockAuditService = {
+    log: jest.fn(),
+  };
+
+  const mockEmergencyOverrideService = {
+    hasActiveOverride: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -23,6 +40,18 @@ describe('RecordsController', () => {
           provide: RecordsService,
           useValue: mockRecordsService,
         },
+        {
+          provide: MedicalPermissionsService,
+          useValue: mockPermissionsService,
+        },
+        {
+          provide: MedicalAuditService,
+          useValue: mockAuditService,
+        },
+        {
+          provide: EmergencyOverrideService,
+          useValue: mockEmergencyOverrideService,
+        },
       ],
     }).compile();
 
@@ -30,6 +59,27 @@ describe('RecordsController', () => {
     service = module.get<RecordsService>(RecordsService);
 
     jest.clearAllMocks();
+  });
+
+  describe('getRecent', () => {
+    it('should return recent records', async () => {
+      const expectedResult = [
+        {
+          recordId: '1',
+          patientAddress: 'patien...g-id',
+          providerAddress: 'System',
+          recordType: RecordType.MEDICAL_REPORT,
+          createdAt: new Date(),
+        },
+      ];
+
+      mockRecordsService.findRecent.mockResolvedValue(expectedResult);
+
+      const result = await controller.getRecent();
+
+      expect(result).toEqual(expectedResult);
+      expect(service.findRecent).toHaveBeenCalled();
+    });
   });
 
   describe('uploadRecord', () => {
