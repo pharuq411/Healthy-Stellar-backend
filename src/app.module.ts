@@ -7,6 +7,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { I18nModule, AcceptLanguageResolver } from 'nestjs-i18n';
 import * as path from 'path';
 import { AuthModule } from './auth/auth.module';
+import { AdminModule } from './admin/admin.module';
 import { BillingModule } from './billing/billing.module';
 import { MedicalRecordsModule } from './medical-records/medical-records.module';
 import { RecordsModule } from './records/records.module';
@@ -37,6 +38,7 @@ import { TracingInterceptor } from './common/interceptors/tracing.interceptor';
 import { GdprModule } from './gdpr/gdpr.module';
 import { TenantInterceptor } from './tenant/interceptors/tenant.interceptor';
 import { JobsModule } from './jobs/jobs.module';
+import { GraphqlModule } from './graphql/graphql.module';
 import { AuditModule } from './common/audit/audit.module';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { ThrottlerConfigService } from './common/throttler/throttler-config.service';
@@ -45,6 +47,7 @@ import { I18nExceptionFilter } from './i18n/filters/i18n-exception.filter';
 import { CircuitBreakerModule } from './common/circuit-breaker/circuit-breaker.module';
 import { CircuitBreakerExceptionFilter } from './common/circuit-breaker/filters/circuit-breaker-exception.filter';
 import { MetricsModule } from './metrics/metrics.module';
+import { HttpMetricsInterceptor } from './metrics/interceptors/http-metrics.interceptor';
 import { LoggerModule } from './common/logger/logger.module';
 import { RequestContextMiddleware } from './common/middleware/request-context.middleware';
 
@@ -78,6 +81,7 @@ import { RequestContextMiddleware } from './common/middleware/request-context.mi
     CommonModule,
     I18nAppModule,
     AuthModule,
+    AdminModule,
     BillingModule,
     MedicalRecordsModule,
     RecordsModule,
@@ -101,6 +105,7 @@ import { RequestContextMiddleware } from './common/middleware/request-context.mi
     TenantConfigModule,
     AnalyticsModule,
     GdprModule,
+    GraphqlModule,
   ],
   controllers: [AppController],
   providers: [
@@ -111,6 +116,11 @@ import { RequestContextMiddleware } from './common/middleware/request-context.mi
     },
     {
       provide: APP_INTERCEPTOR,
+      useClass: HttpMetricsInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TenantInterceptor
       useClass: TenantInterceptor,
     },
     {

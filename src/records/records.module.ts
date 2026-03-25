@@ -8,6 +8,7 @@ import { RecordTemplate } from './entities/record-template.entity';
 import { RecordsController } from './controllers/records.controller';
 import { RecordTemplateController } from './controllers/record-template.controller';
 import { RecordsService } from './services/records.service';
+import { RelatedRecordsService } from './services/related-records.service';
 import { RecordTemplateService } from './services/record-template.service';
 import { IpfsService } from './services/ipfs.service';
 import { StellarService } from './services/stellar.service';
@@ -27,6 +28,9 @@ import { MedicalRbacModule } from '../roles/medical-rbac.module';
     forwardRef(() => AccessControlModule),
     MedicalRbacModule,
   ],
+  controllers: [RecordsController],
+  providers: [RecordsService, RelatedRecordsService, IpfsService, StellarService, IpfsWithBreakerService, RecordEventStoreService],
+  exports: [RecordsService, RelatedRecordsService, IpfsWithBreakerService, RecordEventStoreService],
   controllers: [RecordsController, RecordTemplateController],
   providers: [RecordsService, RecordTemplateService, IpfsService, StellarService, IpfsWithBreakerService, RecordEventStoreService],
   exports: [RecordsService, RecordTemplateService, IpfsWithBreakerService, RecordEventStoreService],

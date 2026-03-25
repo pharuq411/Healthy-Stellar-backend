@@ -14,10 +14,12 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { RecordsService } from '../services/records.service';
+import { RelatedRecordsService } from '../services/related-records.service';
 import { CreateRecordDto } from '../dto/create-record.dto';
 import { PaginationQueryDto } from '../dto/pagination-query.dto';
 import { PaginatedRecordsResponseDto } from '../dto/paginated-response.dto';
 import { RecentRecordDto } from '../dto/recent-record.dto';
+import { RelatedRecordDto } from '../dto/related-record.dto';
 import { MedicalRoles } from '../../roles/medical-rbac.decorator';
 import { MedicalRole } from '../../roles/medical-roles.enum';
 import { MedicalRbacGuard } from '../../roles/medical-rbac.guard';
@@ -27,7 +29,10 @@ import { AdminGuard } from '../../auth/guards/admin.guard';
 @ApiTags('Records')
 @Controller('records')
 export class RecordsController {
-  constructor(private readonly recordsService: RecordsService) {}
+  constructor(
+    private readonly recordsService: RecordsService,
+    private readonly relatedRecordsService: RelatedRecordsService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Upload a new medical record' })
@@ -102,6 +107,14 @@ export class RecordsController {
     return this.recordsService.findAll(query);
   }
 
+  @Get(':id/qr-code')
+  @ApiOperation({ summary: 'Generate a QR code for a one-time share link (patient only)' })
+  @ApiResponse({ status: 200, description: 'Base64 PNG QR code' })
+  @ApiResponse({ status: 404, description: 'Record not found' })
+  async getQrCode(@Param('id') id: string, @Req() req: any) {
+    const patientId = req.user?.userId || req.user?.id;
+    const qrBase64 = await this.recordsService.generateQrCode(id, patientId);
+    return { qrCode: qrBase64 };
   @Get('recent')
   @ApiBearerAuth()
   @UseGuards(MedicalRbacGuard)
@@ -124,6 +137,24 @@ export class RecordsController {
   async findOne(@Param('id') id: string, @Req() req: any) {
     const requesterId = req.user?.userId || req.user?.id;
     return this.recordsService.findOne(id, requesterId);
+  }
+
+  @Get(':id/related')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get related records',
+    description:
+      'Returns up to 10 records related to the given record, scored by: ' +
+      'same type (3pts), same provider (2pts), within ±30 days (1pt). ' +
+      'Access control is enforced on every returned record.',
+  })
+  @ApiResponse({ status: 200, description: 'Related records returned', type: [RelatedRecordDto] })
+  @ApiResponse({ status: 403, description: 'Access denied to source record' })
+  @ApiResponse({ status: 404, description: 'Source record not found' })
+  async getRelated(@Param('id') id: string, @Req() req: any): Promise<RelatedRecordDto[]> {
+    const requesterId = req.user?.userId || req.user?.id;
+    return this.relatedRecordsService.findRelated(id, requesterId);
   }
 
   @Get(':id/events')

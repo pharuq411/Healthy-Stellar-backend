@@ -4,12 +4,16 @@ import {
   NotificationEventType,
 } from '../interfaces/notification-event.interface';
 import { NotificationsGateway } from '../notifications.gateway';
+import { NotificationTemplateService } from './notification-template.service';
 
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
-  constructor(private gateway: NotificationsGateway) {}
+  constructor(
+    private gateway: NotificationsGateway,
+    private templateService: NotificationTemplateService,
+  ) {}
 
   emitRecordAccessed(actorId: string, resourceId: string, metadata?: Record<string, any>): void {
     this.emitEvent({
@@ -61,13 +65,27 @@ export class NotificationsService {
     });
   }
 
+  /**
+   * Resolve a localized notification message for a patient.
+   * Falls back to English when the preferred language is unsupported or the key is missing.
+   */
+  resolveLocalizedNotification(
+    eventType: NotificationEventType,
+    preferredLanguage: string,
+    args: Record<string, any> = {},
+  ) {
+    return this.templateService.resolve(eventType, preferredLanguage, args);
+  }
+
   async sendPatientEmailNotification(
     patientId: string,
     subject: string,
     message: string,
+    preferredLanguage = 'en',
   ): Promise<void> {
-    // Placeholder until a dedicated mail transport is wired into the app.
-    this.logger.log(`Email notification queued for patient ${patientId}: ${subject} - ${message}`);
+    this.logger.log(
+      `Email notification queued for patient ${patientId} [lang=${preferredLanguage}]: ${subject} - ${message}`,
+    );
   }
 
   async sendEmail(
