@@ -23,6 +23,8 @@ import { PaginationQueryDto } from '../dto/pagination-query.dto';
 import { PaginatedRecordsResponseDto } from '../dto/paginated-response.dto';
 import { RecentRecordDto } from '../dto/recent-record.dto';
 import { RelatedRecordDto } from '../dto/related-record.dto';
+import { SearchRecordsDto } from '../dto/search-records.dto';
+import { SearchRecordsResponseDto } from '../dto/search-records-response.dto';
 import { MedicalRoles } from '../../roles/medical-rbac.decorator';
 import { MedicalRole } from '../../roles/medical-roles.enum';
 import { MedicalRbacGuard } from '../../roles/medical-rbac.guard';
@@ -109,6 +111,26 @@ export class RecordsController {
   })
   async findAll(@Query() query: PaginationQueryDto): Promise<PaginatedRecordsResponseDto> {
     return this.recordsService.findAll(query);
+  }
+
+  @Get('search')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Search records with dynamic filtering',
+    description:
+      'Admin/Physician can search all records. Patients are automatically scoped to their own records. ' +
+      'Raw IPFS CIDs are only returned to the record owner.',
+  })
+  @ApiResponse({ status: 200, description: 'Search results', type: SearchRecordsResponseDto })
+  @ApiResponse({ status: 401, description: 'Unauthenticated' })
+  async searchRecords(
+    @Query() dto: SearchRecordsDto,
+    @Req() req: any,
+  ): Promise<SearchRecordsResponseDto> {
+    const callerId: string = req.user?.userId ?? req.user?.id;
+    const callerRole: string = req.user?.role ?? '';
+    return this.recordsService.search(dto, callerId, callerRole);
   }
 
   @Get(':id/qr-code')
