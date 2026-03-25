@@ -11,6 +11,7 @@ import {
   Req,
   Res,
   UseGuards,
+  Version,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -30,8 +31,10 @@ import { MedicalRole } from '../../roles/medical-roles.enum';
 import { MedicalRbacGuard } from '../../roles/medical-rbac.guard';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../../auth/guards/admin.guard';
+import { DeprecatedRoute } from '../../common/decorators/deprecated.decorator';
 
 @ApiTags('Records')
+@Version('1')
 @Controller('records')
 export class RecordsController {
   constructor(
@@ -60,6 +63,11 @@ export class RecordsController {
   }
 
   @Get()
+  @DeprecatedRoute({
+    sunsetDate: 'Wed, 01 Jan 2026 00:00:00 GMT',
+    alternativeRoute: '/v1/records/search',
+    reason: 'Use GET /v1/records/search for richer filtering. This endpoint will be removed in v2.',
+  })
   @ApiOperation({ summary: 'List all medical records with pagination, filtering, and sorting' })
   @ApiResponse({
     status: 200,

@@ -42,6 +42,7 @@ import { TenantInterceptor } from './tenant/interceptors/tenant.interceptor';
 import { JobsModule } from './jobs/jobs.module';
 import { DataRetentionModule } from './data-retention/data-retention.module';
 import { GraphqlModule } from './graphql/graphql.module';
+import { VersioningModule } from './versioning/versioning.module';
 import { AuditModule } from './common/audit/audit.module';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { ThrottlerConfigService } from './common/throttler/throttler-config.service';
@@ -112,6 +113,7 @@ import { RequestContextMiddleware } from './common/middleware/request-context.mi
     ResearchExportModule,
     ReconciliationModule,
     GraphqlModule,
+    VersioningModule,
   ],
   controllers: [AppController],
   providers: [
