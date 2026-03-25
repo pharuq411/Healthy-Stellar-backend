@@ -54,6 +54,7 @@ import { MetricsModule } from './metrics/metrics.module';
 import { HttpMetricsInterceptor } from './metrics/interceptors/http-metrics.interceptor';
 import { LoggerModule } from './common/logger/logger.module';
 import { RequestContextMiddleware } from './common/middleware/request-context.middleware';
+import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 
 @Module({
   imports: [
@@ -155,6 +156,8 @@ import { RequestContextMiddleware } from './common/middleware/request-context.mi
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RequestContextMiddleware).forRoutes('*');
+    // RequestIdMiddleware runs first to ensure X-Request-Id is set before
+    // RequestContextMiddleware stores it in AsyncLocalStorage
+    consumer.apply(RequestIdMiddleware, RequestContextMiddleware).forRoutes('*');
   }
 }
