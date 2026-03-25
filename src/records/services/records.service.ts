@@ -82,7 +82,7 @@ export class RecordsService {
       patientId,
     } = query;
 
-    const where: FindOptionsWhere<Record> = {};
+    const where: FindOptionsWhere<Record> = { isDeleted: false };
     if (recordType) where.recordType = recordType;
     if (patientId) where.patientId = patientId;
     if (fromDate && toDate) {
@@ -127,8 +127,12 @@ export class RecordsService {
     return QRCode.toDataURL(url);
   }
 
-  async findOne(id: string, requesterId?: string): Promise<Record> {
+  async findOne(id: string, requesterId?: string, includeDeleted = false): Promise<Record> {
     const record = await this.recordRepository.findOne({ where: { id } });
+
+    if (!record || (!includeDeleted && record.isDeleted)) {
+      throw new NotFoundException(`Record ${id} not found`);
+    }
 
     if (record && requesterId) {
       const emergencyGrant = await this.accessControlService.findActiveEmergencyGrant(
@@ -231,7 +235,9 @@ export class RecordsService {
         'record.recordType',
         'record.description',
         'record.createdAt',
-      ]);
+      ])
+      // Always exclude soft-deleted records from search results
+      .andWhere('record.isDeleted = :isDeleted', { isDeleted: false });
 
     // ── Access control scoping ────────────────────────────────────────────
     if (isPrivileged) {

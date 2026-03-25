@@ -159,10 +159,15 @@ export class RecordsController {
   @Get(':id')
   @ApiOperation({ summary: 'Get a single record by ID' })
   @ApiResponse({ status: 200, description: 'Record retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'Record not found' })
-  async findOne(@Param('id') id: string, @Req() req: any) {
+  @ApiResponse({ status: 404, description: 'Record not found or deleted' })
+  @ApiQuery({ name: 'includeDeleted', required: false, type: Boolean, description: 'Admin only: include soft-deleted records' })
+  async findOne(@Param('id') id: string, @Req() req: any, @Query('includeDeleted') includeDeleted?: string) {
     const requesterId = req.user?.userId || req.user?.id;
-    return this.recordsService.findOne(id, requesterId);
+    const callerRole: string = req.user?.role ?? '';
+    const isAdmin = callerRole === 'admin';
+    // Only admins may pass includeDeleted=true
+    const showDeleted = isAdmin && includeDeleted === 'true';
+    return this.recordsService.findOne(id, requesterId, showDeleted);
   }
 
   @Get(':id/download')
