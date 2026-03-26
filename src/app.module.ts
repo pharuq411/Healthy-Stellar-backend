@@ -47,8 +47,8 @@ import { LedgerReconciliationModule } from './ledger-reconciliation/ledger-recon
 import { StellarStreamModule } from './stellar-stream/stellar-stream.module';
 import { EhrImportModule } from './ehr-import/ehr-import.module';
 import { AuditModule } from './common/audit/audit.module';
-import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
-import { ThrottlerConfigService } from './common/throttler/throttler-config.service';
+import { CustomThrottlerGuard } from './common/throttler/custom-throttler.guard';
+import { ThrottlerConfigService } from './common/throttler/throttler.config';
 import { I18nAppModule } from './i18n/i18n.module';
 import { I18nExceptionFilter } from './i18n/filters/i18n-exception.filter';
 import { CircuitBreakerModule } from './common/circuit-breaker/circuit-breaker.module';
@@ -58,6 +58,7 @@ import { HttpMetricsInterceptor } from './metrics/interceptors/http-metrics.inte
 import { LoggerModule } from './common/logger/logger.module';
 import { RequestContextMiddleware } from './common/middleware/request-context.middleware';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
+import { EventStoreModule } from './event-store/event-store.module';
 
 @Module({
   imports: [
@@ -120,7 +121,7 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
     VersioningModule,
     LedgerReconciliationModule,
     StellarStreamModule,
-    EhrImportModule,
+    EventStoreModule,
   ],
   controllers: [AppController],
   providers: [
