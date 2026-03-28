@@ -4,6 +4,7 @@ import { AnalyticsService } from './analytics.service';
 import { OverviewResponseDto } from './dto/overview-response.dto';
 import { ActivityQueryDto, ActivityResponseDto } from './dto';
 import { TopProvidersResponseDto } from './dto/top-providers-response.dto';
+import { AdminStatsResponseDto } from './dto/admin-stats-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../auth/guards/admin.guard';
 
@@ -13,6 +14,15 @@ import { AdminGuard } from '../auth/guards/admin.guard';
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
+
+  @Get('stats')
+  @ApiOperation({ summary: 'Get platform-wide admin dashboard statistics' })
+  @ApiResponse({ status: 200, description: 'Dashboard stats returned', type: AdminStatsResponseDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Admin access required' })
+  async getStats(): Promise<AdminStatsResponseDto> {
+    return this.analyticsService.getStats();
+  }
 
   @Get('overview')
   @ApiOperation({ summary: 'Get system overview metrics' })

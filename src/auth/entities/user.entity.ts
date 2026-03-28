@@ -46,6 +46,15 @@ export class User {
   isActive: boolean;
 
   @Column({ default: false })
+  isLicenseVerified: boolean;
+
+  @Column({ nullable: true, length: 100 })
+  country: string;
+
+  @Column({ default: true })
+  isAcceptingPatients: boolean;
+
+  @Column({ default: false })
   mfaEnabled: boolean;
 
   @Column({ nullable: true })
@@ -82,6 +91,10 @@ export class User {
 
   @Column({ nullable: true, length: 255 })
   institution: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  @Index()
+  organizationId: string;
 
   @Column({ nullable: true, length: 255, select: false })
   stellarPublicKey: string;

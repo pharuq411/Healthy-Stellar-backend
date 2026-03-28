@@ -6,7 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository } from 'typeorm';
+import { Like, Repository, DataSource } from 'typeorm';
 import { Patient } from './entities/patient.entity';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { generateMRN } from './utils/mrn.generator';
@@ -22,6 +22,7 @@ export class PatientsService {
   constructor(
     @InjectRepository(Patient)
     private readonly patientRepo: Repository<Patient>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(dto: CreatePatientDto): Promise<Patient> {
@@ -61,11 +62,24 @@ export class PatientsService {
     return this.patientRepo.findOneBy({ mrn });
   }
 
-  async findAll(filters?: Record<string, unknown>): Promise<Patient[]> {
-    if (filters && Object.keys(filters).length > 0) {
-      return this.patientRepo.find({ where: filters as any });
+  async findAll(
+    paginationDto?: PaginationDto,
+    filters?: Record<string, unknown>,
+  ): Promise<PaginatedResponseDto<Patient>> {
+    if (!paginationDto) {
+      // Backward compatibility: return all patients if no pagination provided
+      const patients =
+        filters && Object.keys(filters).length > 0
+          ? await this.patientRepo.find({ where: filters as any })
+          : await this.patientRepo.find();
+      return PaginationUtil.createResponse(patients, patients.length, 1, patients.length);
     }
-    return this.patientRepo.find();
+
+    return PaginationUtil.paginate(
+      this.patientRepo,
+      paginationDto,
+      filters && Object.keys(filters).length > 0 ? { where: filters as any } : undefined,
+    );
   }
 
   async search(search: string): Promise<Patient[]> {
@@ -98,6 +112,19 @@ export class PatientsService {
     return this.patientRepo.save(patient);
   }
 
+  private async detectDuplicate(dto: CreatePatientDto): Promise<boolean> {
+    const match = await this.patientRepo.findOne({
+      where: [
+        { nationalId: dto.nationalId },
+        { email: dto.email },
+        { phone: dto.phone },
+        { firstName: dto.firstName, lastName: dto.lastName, dateOfBirth: dto.dateOfBirth },
+      ],
+    });
+
+    return !!match;
+  }
+
   async update(id: string, updateData: Partial<Patient>): Promise<Patient> {
     await this.patientRepo.update(id, updateData as any);
     const updated = await this.patientRepo.findOneBy({ id });
@@ -107,6 +134,27 @@ export class PatientsService {
 
   async softDelete(id: string): Promise<void> {
     await this.patientRepo.update(id, { isActive: false } as any);
+  }
+
+  async updateProfile(
+    stellarAddress: string,
+    profileData: Partial<
+      Pick<
+        Patient,
+        | 'phone'
+        | 'email'
+        | 'address'
+        | 'contactPreferences'
+        | 'emergencyContact'
+        | 'primaryLanguage'
+        | 'genderIdentity'
+      >
+    >,
+  ): Promise<Patient> {
+    const patient = await this.patientRepo.findOne({ where: { stellarAddress } });
+    if (!patient) throw new NotFoundException('Patient not found');
+    Object.assign(patient, profileData);
+    return this.patientRepo.save(patient);
   }
 
   async setGeoRestrictions(id: string, allowedCountries: string[]): Promise<Patient> {

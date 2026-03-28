@@ -7,10 +7,12 @@ Comprehensive documentation for the NestJS backend that interfaces with Stellar 
 
 - [Architecture Overview](#architecture-overview)
 - [Project Structure](#project-structure)
+- [Local Development with Docker](#local-development-with-docker)
 - [Installation & Setup](#installation--setup)
 - [Configuration](#configuration)
 - [Core Modules](#core-modules)
 - [API Endpoints](#api-endpoints)
+- [Postman Collection](#postman-collection)
 - [Database Schema](#database-schema)
 - [Medical Records System](#medical-records-system)
 - [Authentication & Authorization](#authentication--authorization)
@@ -71,6 +73,70 @@ src/
         └── reporting.controller.ts
 ```
 
+## Local Development with Docker
+
+The fastest way to get a fully working environment is Docker — no local Node, Postgres, or Redis installation required.
+
+### Services started
+
+| Service  | Container    | Exposed port(s)       | Purpose                        |
+|----------|--------------|-----------------------|--------------------------------|
+| api      | hs-api       | 3000                  | NestJS app with hot reload     |
+| postgres | hs-postgres  | 5432                  | PostgreSQL 15                  |
+| redis    | hs-redis     | 6379                  | Redis 7                        |
+| mailhog  | hs-mailhog   | 1025 (SMTP), 8025 (UI)| Local email capture            |
+
+### Quick start
+
+```bash
+# 1. Copy the Docker env file (values are pre-wired to compose service names)
+cp .env.docker .env.docker.local   # optional: customise secrets
+
+# 2. Start all services
+docker compose -f docker-compose.local.yml up --build
+
+# 3. (First run) run migrations inside the running api container
+docker compose -f docker-compose.local.yml exec api npm run migration:run
+```
+
+The API is available at **http://localhost:3000**  
+Swagger UI is at **http://localhost:3000/api**  
+MailHog web UI is at **http://localhost:8025**
+
+### Hot reload
+
+The `src/` directory is bind-mounted into the container. NestJS runs with `nest start --watch`, so any file save triggers an automatic rebuild inside the container — no restart needed.
+
+### Useful commands
+
+```bash
+# Tail logs for a single service
+docker compose -f docker-compose.local.yml logs -f api
+
+# Run a one-off command inside the api container
+docker compose -f docker-compose.local.yml exec api npm run migration:run
+
+# Stop and remove containers (keeps volumes)
+docker compose -f docker-compose.local.yml down
+
+# Stop and wipe all data volumes
+docker compose -f docker-compose.local.yml down -v
+```
+
+### Environment file
+
+`.env.docker` is committed to the repo and contains safe local-only defaults. All hostnames (`postgres`, `redis`, `mailhog`) match the compose service names so they resolve inside the Docker network automatically. Copy and edit it if you need to override any value:
+
+```bash
+cp .env.docker .env.docker.local
+# then pass it explicitly:
+docker compose -f docker-compose.local.yml --env-file .env.docker.local up
+```
+
+> **Note:** `.env.docker` uses placeholder secrets. Never use these values outside of local development.
+
+---
+
 ## Installation & Setup
 
 ### Prerequisites
@@ -120,6 +186,17 @@ Swagger documentation will be available at `http://localhost:3000/api`
 - `UPLOAD_PATH` - File upload directory (default: ./storage/uploads)
 - `JWT_SECRET` - JWT secret key for authentication
 - `JWT_EXPIRES_IN` - JWT expiration time
+
+## Security Headers
+
+The API applies `helmet()` in `src/main.ts` using the shared configuration in `src/security/http-security.config.ts`.
+
+- `Content-Security-Policy`: Restricts the browser to loading scripts, styles, images, and network connections only from approved sources, reducing XSS and asset injection risk.
+- `X-Frame-Options: DENY`: Prevents the API from being embedded in frames or iframes, blocking clickjacking attacks.
+- `X-Content-Type-Options: nosniff`: Stops browsers from MIME-sniffing responses into a different content type than declared.
+- `Strict-Transport-Security`: Tells browsers to use HTTPS for future requests and resist protocol downgrade attacks.
+- `Referrer-Policy: no-referrer`: Prevents browsers from leaking request origin or path information in the `Referer` header.
+- `X-XSS-Protection: 0`: Explicitly disables the legacy browser XSS filter so CSP remains the single, predictable browser-side XSS control.
 
 ## Core Modules
 
@@ -180,6 +257,30 @@ The medical records module provides comprehensive functionality for managing med
 - `GET /reports/activity` - Get activity report
 - `GET /reports/consent` - Get consent report
 - `GET /reports/statistics` - Get statistics
+
+## Postman Collection
+
+A comprehensive Postman collection is available for testing and exploring the API:
+
+- **Location**: `docs/postman/`
+- **Collection**: `MedChain.postman_collection.json`
+- **Environments**: Local, Testnet, and Staging
+- **Documentation**: `docs/postman/README.md`
+
+### Features
+
+- Organized into folders matching API modules (Auth, Records, Access Control, etc.)
+- Pre-configured authentication with automatic JWT token management
+- Collection-level tests for response validation
+- Environment-specific configurations
+- Example requests and responses for all endpoints
+
+### Quick Start
+
+1. Import the collection and environment files into Postman
+2. Select the appropriate environment (Local/Testnet/Staging)
+3. Run the "Login" request in the Auth folder
+4. All subsequent requests will automatically use the JWT token
 
 ## Database Schema
 

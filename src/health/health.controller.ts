@@ -1,11 +1,23 @@
-import { Controller, Get, Version, VERSION_NEUTRAL } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, UseGuards, Version, VERSION_NEUTRAL } from '@nestjs/common';
+import { Controller, Get, Version, VERSION_NEUTRAL, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { HealthCheck, HealthCheckService, TypeOrmHealthIndicator } from '@nestjs/terminus';
 import { RedisHealthIndicator } from './indicators/redis.health';
 import { IpfsHealthIndicator } from './indicators/ipfs.health';
 import { StellarHealthIndicator } from './indicators/stellar.health';
+import { DetailedHealthIndicator } from './indicators/detailed-health.indicator';
+import { DetailedHealthIndicator } from './indicators/detailed.health';
 import { Public } from '../common/decorators/public.decorator';
+ feat/detailed-health-endpoint
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../auth/entities/user.entity';
+
 import { CircuitBreakerService } from '../common/circuit-breaker/circuit-breaker.service';
+ main
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AdminGuard } from '../auth/guards/admin.guard';
 
 @ApiTags('health')
 @Version(VERSION_NEUTRAL)
@@ -18,7 +30,12 @@ export class HealthController {
     private redis: RedisHealthIndicator,
     private ipfs: IpfsHealthIndicator,
     private stellar: StellarHealthIndicator,
+ feat/detailed-health-endpoint
+    private detailed: DetailedHealthIndicator,
+
     private circuitBreaker: CircuitBreakerService,
+ main
+    private detailedHealth: DetailedHealthIndicator,
   ) {}
 
   @Get()
@@ -51,6 +68,17 @@ export class HealthController {
     };
   }
 
+  @Get('detailed')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Detailed admin health diagnostics' })
+  @ApiResponse({ status: 200, description: 'Detailed health report' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden – admin only' })
+  getDetailedHealth() {
+    return this.detailedHealth.getDetailedHealth();
+  }
+
   @Get('circuit-breakers')
   @ApiOperation({ summary: 'Get circuit breaker states' })
   @ApiResponse({ status: 200, description: 'Circuit breaker states retrieved' })
@@ -59,5 +87,19 @@ export class HealthController {
       states: this.circuitBreaker.getAllStates(),
       details: this.circuitBreaker.getDetailedStats(),
     };
+  }
+
+  @Get('detailed')
+  @HealthCheck()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Detailed diagnostics (admin only)' })
+  @ApiResponse({ status: 200, description: 'Detailed health diagnostics' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden – admin role required' })
+  @ApiResponse({ status: 503, description: 'Critical dependency down' })
+  async checkDetailed() {
+    return this.health.check([() => this.detailed.getDetailedHealth()]);
   }
 }
