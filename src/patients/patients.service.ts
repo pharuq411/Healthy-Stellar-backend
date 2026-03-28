@@ -1,5 +1,6 @@
 import {
   Injectable,
+  ForbiddenException,
   ConflictException,
   NotFoundException,
   BadRequestException,
@@ -9,6 +10,12 @@ import { Like, Repository } from 'typeorm';
 import { Patient } from './entities/patient.entity';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { generateMRN } from './utils/mrn.generator';
+import {
+  NotificationChannel,
+  UpdateNotificationPreferencesDto,
+} from './dto/update-notification-preferences.dto';
+import { DEFAULT_NOTIFICATION_PREFERENCES } from './types/notification-preferences.type';
+import { UserRole } from '../auth/entities/user.entity';
 
 @Injectable()
 export class PatientsService {
@@ -114,6 +121,44 @@ export class PatientsService {
     if (!patient) throw new NotFoundException('Patient not found');
     patient.patientPhotoUrl = `/uploads/patients/photos/${file.filename}`;
     return this.patientRepo.save(patient);
+  }
+
+  async updateNotificationPreferences(
+    patientId: string,
+    requesterId: string,
+    requesterRole: UserRole,
+    dto: UpdateNotificationPreferencesDto,
+  ): Promise<{ notificationPreferences: Patient['notificationPreferences'] }> {
+    const patient = await this.patientRepo.findOne({ where: { id: patientId } });
+
+    if (!patient) {
+      throw new NotFoundException(`Patient ${patientId} not found`);
+    }
+
+    if (requesterRole !== UserRole.PATIENT || requesterId !== patientId) {
+      throw new ForbiddenException('You can only update your own notification preferences');
+    }
+
+    if (dto.channels?.includes(NotificationChannel.SMS) && !patient.isPhoneVerified) {
+      throw new BadRequestException(
+        'SMS channel requires a verified phone number. Please verify your phone first.',
+      );
+    }
+
+    const currentPreferences = patient.notificationPreferences ?? {
+      ...DEFAULT_NOTIFICATION_PREFERENCES,
+    };
+
+    patient.notificationPreferences = {
+      ...currentPreferences,
+      ...dto,
+    };
+
+    const savedPatient = await this.patientRepo.save(patient);
+
+    return {
+      notificationPreferences: savedPatient.notificationPreferences,
+    };
   }
 
   private async detectDuplicate(dto: CreatePatientDto): Promise<boolean> {

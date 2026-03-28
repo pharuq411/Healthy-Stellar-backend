@@ -6,6 +6,10 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  NotificationPreferences,
+} from '../types/notification-preferences.type';
 
 @Entity('patients')
 export class Patient {
@@ -80,6 +84,9 @@ export class Patient {
   @Column('json', { nullable: true })
   address?: string;
 
+  @Column({ default: false })
+  isPhoneVerified: boolean;
+
   /**
    * -----------------------------
    * Identification & Media
@@ -120,6 +127,14 @@ export class Patient {
    */
   @Column('simple-array', { nullable: true, default: null })
   allowedCountries: string[] | null;
+
+  @Column({
+    type: 'jsonb',
+    nullable: false,
+    default: () =>
+      `'${JSON.stringify(DEFAULT_NOTIFICATION_PREFERENCES)}'`,
+  })
+  notificationPreferences: NotificationPreferences;
 
   /**
    * -----------------------------
