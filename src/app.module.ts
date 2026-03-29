@@ -36,14 +36,18 @@ import { MedicalDataValidationPipe } from './common/validation/medical-data.vali
 import { TenantConfigModule } from './tenant-config/tenant-config.module';
 import { TracingInterceptor } from './common/interceptors/tracing.interceptor';
 import { GdprModule } from './gdpr/gdpr.module';
-import { ResearchExportModule } from './research-export/research-export.module';
-import { ReconciliationModule } from './reconciliation/reconciliation.module';
+import { ProviderPatientModule } from './provider-patient/provider-patient.module';
 import { TenantInterceptor } from './tenant/interceptors/tenant.interceptor';
 import { JobsModule } from './jobs/jobs.module';
+import { DataRetentionModule } from './data-retention/data-retention.module';
 import { GraphqlModule } from './graphql/graphql.module';
+import { VersioningModule } from './versioning/versioning.module';
+import { LedgerReconciliationModule } from './ledger-reconciliation/ledger-reconciliation.module';
+import { StellarStreamModule } from './stellar-stream/stellar-stream.module';
+import { EhrImportModule } from './ehr-import/ehr-import.module';
 import { AuditModule } from './common/audit/audit.module';
-import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
-import { ThrottlerConfigService } from './common/throttler/throttler-config.service';
+import { CustomThrottlerGuard } from './common/throttler/custom-throttler.guard';
+import { ThrottlerConfigService } from './common/throttler/throttler.config';
 import { I18nAppModule } from './i18n/i18n.module';
 import { I18nExceptionFilter } from './i18n/filters/i18n-exception.filter';
 import { CircuitBreakerModule } from './common/circuit-breaker/circuit-breaker.module';
@@ -52,6 +56,10 @@ import { MetricsModule } from './metrics/metrics.module';
 import { HttpMetricsInterceptor } from './metrics/interceptors/http-metrics.interceptor';
 import { LoggerModule } from './common/logger/logger.module';
 import { RequestContextMiddleware } from './common/middleware/request-context.middleware';
+import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
+import { EventStoreModule } from './event-store/event-store.module';
+import { BullBoardAuthMiddleware } from './queues/middleware/bull-board-auth.middleware';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -102,6 +110,7 @@ import { RequestContextMiddleware } from './common/middleware/request-context.mi
     FhirModule,
     AccessControlModule,
     JobsModule,
+    DataRetentionModule,
     StellarModule,
     AuditModule,
     TenantConfigModule,
@@ -110,6 +119,14 @@ import { RequestContextMiddleware } from './common/middleware/request-context.mi
     ResearchExportModule,
     ReconciliationModule,
     GraphqlModule,
+    VersioningModule,
+    LedgerReconciliationModule,
+    StellarStreamModule,
+    EventStoreModule,
+    ProjectionsModule,
+    CqrsModule,
+    ProviderPatientModule,
+    WebhooksModule,
   ],
   controllers: [AppController],
   providers: [
@@ -124,7 +141,6 @@ import { RequestContextMiddleware } from './common/middleware/request-context.mi
     },
     {
       provide: APP_INTERCEPTOR,
-      useClass: TenantInterceptor
       useClass: TenantInterceptor,
     },
     {
@@ -151,6 +167,11 @@ import { RequestContextMiddleware } from './common/middleware/request-context.mi
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RequestContextMiddleware).forRoutes('*');
+    // RequestIdMiddleware runs first to ensure X-Request-Id is set before
+    // RequestContextMiddleware stores it in AsyncLocalStorage
+    consumer.apply(RequestIdMiddleware, RequestContextMiddleware).forRoutes('*');
+
+    // Protect Bull Board dashboard with authentication
+    consumer.apply(BullBoardAuthMiddleware).forRoutes('/admin/queues');
   }
 }
