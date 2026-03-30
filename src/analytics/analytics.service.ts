@@ -27,6 +27,8 @@ export class AnalyticsService {
     private readonly stellarTransactionRepository: Repository<StellarTransaction>,
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
   ) {}
 
   private requireTenantId(): string {

@@ -28,6 +28,7 @@ export class AnalyticsController {
   }
 
   @Get('overview')
+  @Header('Cache-Control', 'max-age=60, stale-while-revalidate=30')
   @ApiOperation({ summary: 'Get system overview metrics' })
   @ApiResponse({
     status: 200,
