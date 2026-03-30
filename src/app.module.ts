@@ -19,6 +19,8 @@ import { TreatmentPlanningModule } from './treatment-planning/treatment-planning
 import { PharmacyModule } from './pharmacy/pharmacy.module';
 import { InfectionControlModule } from './infection-control/infection-control.module';
 import { EmergencyOperationsModule } from './emergency-operations/emergency-operations.module';
+import { EmergencyMedicalInfoModule } from './emergency-medical-info/emergency-medical-info.module';
+import { HospitalRegistryModule } from './hospital-registry/hospital-registry.module';
 import { AccessControlModule } from './access-control/access-control.module';
 import { TenantModule } from './tenant/tenant.module';
 import { FhirModule } from './fhir/fhir.module';
@@ -101,6 +103,8 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     TreatmentPlanningModule,
     PharmacyModule,
     EmergencyOperationsModule,
+    EmergencyMedicalInfoModule,
+    HospitalRegistryModule,
     ValidationModule,
     InfectionControlModule,
     HealthModule,
