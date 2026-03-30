@@ -7,8 +7,9 @@ import { HealthController } from './health.controller';
 import { RedisHealthIndicator } from './indicators/redis.health';
 import { IpfsHealthIndicator } from './indicators/ipfs.health';
 import { StellarHealthIndicator } from './indicators/stellar.health';
-import { DetailedHealthIndicator } from './indicators/detailed.health';
+import { DetailedHealthIndicator } from './indicators/detailed-health.indicator';
 import { CircuitBreakerModule } from '../common/circuit-breaker/circuit-breaker.module';
+import { DataResidencyModule } from '../data-residency/data-residency.module';
 import { QUEUE_NAMES } from '../queues/queue.constants';
 
 @Module({
@@ -17,6 +18,7 @@ import { QUEUE_NAMES } from '../queues/queue.constants';
     HttpModule,
     CircuitBreakerModule,
     TypeOrmModule,
+    DataResidencyModule,
     BullModule.registerQueue(
       { name: QUEUE_NAMES.STELLAR_TRANSACTIONS },
       { name: QUEUE_NAMES.IPFS_UPLOADS },
@@ -25,6 +27,11 @@ import { QUEUE_NAMES } from '../queues/queue.constants';
     ),
   ],
   controllers: [HealthController],
-  providers: [RedisHealthIndicator, IpfsHealthIndicator, StellarHealthIndicator, DetailedHealthIndicator],
+  providers: [
+    RedisHealthIndicator,
+    IpfsHealthIndicator,
+    StellarHealthIndicator,
+    DetailedHealthIndicator,
+  ],
 })
 export class HealthModule {}
