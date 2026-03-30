@@ -29,6 +29,11 @@ export class SessionManagementService {
     private configService: ConfigService,
   ) {}
 
+  /** SHA-256 hash a token — the raw value is never persisted. */
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
   /**
    * Create a new session, enforcing the per-user session limit.
    * If the limit is reached, the oldest active session is revoked first.
@@ -47,8 +52,8 @@ export class SessionManagementService {
 
     const session = this.sessionRepository.create({
       userId,
-      accessToken,
-      refreshToken,
+      accessTokenHash: this.hashToken(accessToken),
+      refreshTokenHash: this.hashToken(refreshToken),
       expiresAt,
       refreshTokenExpiresAt,
       ipAddress,
@@ -135,8 +140,8 @@ export class SessionManagementService {
       throw new UnauthorizedException('Refresh token expired');
     }
 
-    session.accessToken = newAccessToken;
-    session.refreshToken = newRefreshToken;
+    session.accessTokenHash = this.hashToken(newAccessToken);
+    session.refreshTokenHash = this.hashToken(newRefreshToken);
     session.expiresAt = newExpiresAt;
     session.refreshTokenExpiresAt = newRefreshTokenExpiresAt;
 
